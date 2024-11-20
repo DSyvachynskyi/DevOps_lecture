@@ -1,0 +1,53 @@
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
+
+environment {
+    BUILD_STARTED = ''
+    BUILD_COMPLETED = ''
+}
+
+def GetTime(){
+    return new Date().format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone('UTC'))
+}
+
+node {
+    parameters {
+        string(name: 'BRANCH_NAME', defaultValue: 'main')
+        booleanParam(name: 'RUN_TESTS', defaultValue: true)
+        choice(name: 'ENVIRONMENT', choices: ['DEV', 'PROD'])
+    }
+    try {
+        stage('Build') {
+            BUILD_STARTED = GetTime()       
+            echo "Building from branch ${params.BRANCH_NAME}"  
+        }
+
+        stage('Test') {
+            if (params.RUN_TESTS == true) {
+                echo 'Testing...'
+            } else {
+                Utils.markStageSkippedForConditional('Test')
+            }
+        }
+
+        stage('Deploy') {
+            if (params.ENVIRONMENT == 'PROD') {
+                echo "Deploying to Production!"
+            } else {
+                echo "Deploying to DEV!"
+            }
+
+            sleep(time: 3, unit: 'SECONDS')
+            BUILD_COMPLETED = GetTime()
+        }
+
+        echo 'Pipeline completed successfully!'
+        echo "Build ${BUILD_NUMBER} started at ${BUILD_STARTED}"
+        echo "Build ${BUILD_NUMBER} completed at ${BUILD_COMPLETED}"
+        
+    } catch (Exception e) {
+        echo 'Pipeline failed.'
+        echo "Build ${BUILD_NUMBER} started at ${BUILD_STARTED}"
+        echo "Build ${BUILD_NUMBER} completed at ${BUILD_COMPLETED}"
+        throw e
+    }
+}
